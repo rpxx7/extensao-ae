@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>FX HUB</title>
+  <link rel="stylesheet" href="style.css"> <script src="./lib/CSInterface.js"></script>
+  <style>
+    .modal {
+      display: none; 
+      position: fixed; z-index: 1000; left: 0; top: 0;
+      width: 100%; height: 100%;
+      overflow: auto; background-color: rgba(0,0,0,0.6);
+      justify-content: center; align-items: center;
+    }
+    .modal-content {
+      background-color: #282828; color: #eee;
+      padding: 25px; border-radius: 8px;
+      text-align: center; min-width: 300px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    }
+    .modal-content h3 { margin-top: 0; margin-bottom: 15px; }
+    .modal-content input {
+      width: 90%; padding: 10px; margin-bottom: 15px;
+      border: 1px solid #555; background-color: #333; color: #eee;
+      border-radius: 4px;
+    }
+    .modal-content button {
+      padding: 10px 20px; border: none; border-radius: 4px;
+      cursor: pointer; background-color: #5e5eef; color: white;
+    }
+    .modal-content button:hover { background-color: #4a4acc; }
+    #activationErrorMsg { color: #ff6666; margin-top: 10px; min-height: 1.2em; }
+    .modal-content .close {
+        color: #aaa; float: right; font-size: 28px; font-weight: bold;
+        position: absolute; top: 5px; right: 15px; cursor: pointer;
+        line-height: 1;
+    }
+   .modal-content .close:hover, .modal-content .close:focus { color: #fff; text-decoration: none; }
+
+   #mainContent { position: relative; z-index: 1; }
+
+  </style>
+</head>
+<body>
+
+<div id="activationModal" class="modal">
+    <div class="modal-content">
+      <img src="./img/icon.svg" alt="FX HUB Logo" id="activationLogo">
+
+      <h3>Ativação da Extensão FX HUB</h3>
+      <input type="text" id="licenseKeyInput" placeholder="Digite sua chave de ativação">
+      <button id="activateBtn">Ativar</button>
+      <p id="activationErrorMsg"></p>
+
+      <p id="discordLink">
+        Solicite a chave de ativação em nosso
+        <a href="https://editinghub.com.br/discord" target="_blank">Discord</a>.
+      </p>
+    </div>
+  </div>
+
+  <div id="modalPresets" class="modal">
+    <div class="modal-content">
+      <span id="fecharModal" class="close">&times;</span>
+      <h3>Selecione um Preset para Aplicar nos Marcadores</h3>
+      <div id="listaPresets"></div>
+    </div>
+  </div>
+
+  <div id="mainContent" style="display: none;">
+    <div id="categories"></div>
+    <div class="grid-container" id="output"></div>
+    <div class="footer">
+      <span id="hubLink" class="footer-link">
+        editinghub.com.br
+      </span>
+    </div>
+  </div>
+
+  <div id="toast-container"></div>
+
+  <script>
+    const csInterface = new CSInterface();
+    const extPath = csInterface.getSystemPath(SystemPath.EXTENSION).replace(/\\/g, "/");
+    const LICENSE_STORAGE_KEY = "FXHUB_LICENSE"; // Chave única para esta extensão
+    const HWID_STORAGE_KEY = "FXHUB_HARDWAREID"; // Chave única para esta extensão
+
+    function showToast(message, type = 'info', duration = 3000) {
+        const container = document.getElementById('toast-container');
+        if (!container) return;
+        const toast = document.createElement('div');
+        toast.classList.add('toast', type);
+        toast.textContent = message;
+        container.appendChild(toast);
+        requestAnimationFrame(() => toast.classList.add('show')); // Força reflow para animar
+        setTimeout(() => {
+            toast.classList.remove('show');
+            toast.addEventListener('transitionend', () => toast.remove());
+            // Fallback para remover se a transição não ocorrer
+             setTimeout(() => { if (toast.parentNode) toast.remove(); }, 500);
+        }, duration);
+    }
+
+    function showActivationModal(errorMessage = '') {
+        const errorMsgElement = document.getElementById('activationErrorMsg');
+        if (errorMsgElement) errorMsgElement.innerText = errorMessage;
+        document.getElementById('activationModal').style.display = 'flex';
+        document.getElementById('mainContent').style.display = 'none';
+    }
+
+    function showMainContent() {
+        document.getElementById('activationModal').style.display = 'none';
+        document.getElementById('mainContent').style.display = 'block';
+
+        initializeUI();
+    }
+
+    function init() {
+        console.log("Iniciando verificação de ativação (FX HUB Modificado)...");
+        const jsxFile = extPath + "/MainScript.jsxbin";
+        csInterface.evalScript(`$.evalFile("${jsxFile}")`, (loadResult) => {
+            console.log("Tentativa de carregar MainScript.jsx concluída.");
+
+            const storedLicense = localStorage.getItem(LICENSE_STORAGE_KEY); 
+            const storedHwid = localStorage.getItem(HWID_STORAGE_KEY);    
+            if (storedLicense && storedHwid) {
+
+                console.log("Licença encontrada no localStorage. Re-injetando no JSX e validando...");
+
+
+                const validationCode =
+                  `if(typeof $._ext !== 'undefined'){` +
+                  `  $._ext.saveLicense(${JSON.stringify(storedLicense)});` + 
+                  `  $._ext.saveHardwareID(${JSON.stringify(storedHwid)});` +    
+                  `  if(typeof $._ext.initPluginSecure === 'function') {` +
+                  `    $._ext.initPluginSecure();` +                        
+                  `  } else { 'ERROR:initPluginSecure_NOT_FOUND'; }` +
+                  `} else { 'ERROR:JSX_NOT_LOADED'; }`;
+
+
+                csInterface.evalScript(validationCode, res => {
+                    console.log("Resultado da validação pós-injeção:", res);
+                    if (res === "OK") {
+
+                        showMainContent(); // 
+                    } else if (res === "NEED_ACTIVATION") {
+
+                        localStorage.removeItem(LICENSE_STORAGE_KEY);
+                        localStorage.removeItem(HWID_STORAGE_KEY);
+                        showActivationModal("Sua licença precisa ser revalidada.");
+                    } else {
+
+                        console.error("Erro durante a validação pós-injeção:", res);
+                        localStorage.removeItem(LICENSE_STORAGE_KEY);
+                        localStorage.removeItem(HWID_STORAGE_KEY);
+                         showActivationModal("Erro ao verificar licença (" + res + "). Tente recarregar.");
+                    }
+                });
+            } else {
+
+                console.log("Nenhuma licença no localStorage. Exibindo modal.");
+                showActivationModal();
+            }
+        }); 
+    } 
+
+
+    function handleActivationClick() {
+        const keyInput = document.getElementById('licenseKeyInput');
+        const licenseKey = keyInput.value.trim();
+        const errorMsgElement = document.getElementById('activationErrorMsg');
+        errorMsgElement.innerText = ''; // Limpa erro anterior
+
+        if (!licenseKey) {
+            errorMsgElement.innerText = 'Por favor, insira sua chave.';
+            return;
+        }
+
+        // 1. Pega o Hardware ID do JSX
+        const getHwidCode = `typeof $._ext !== 'undefined' && typeof $._ext.getHardwareID === 'function' ? $._ext.getHardwareID() : 'ERROR:JSX_NOT_LOADED'`;
+        csInterface.evalScript(getHwidCode, hwid => {
+            if (!hwid || hwid === 'ERROR:JSX_NOT_LOADED' || hwid.includes("unknown") || hwid.includes("error")) {
+               errorMsgElement.innerText = 'Erro ao obter ID do sistema.';
+               console.error("Falha ao obter Hardware ID:", hwid);
+               return;
+            }
+
+            console.log("Hardware ID obtido:", hwid);
+            console.log("Chave inserida:", licenseKey);
+
+
+            const validationUrl = 'https://api.editinghub.com.br/fxhub/ativar';
+            console.log("Tentando ativar em:", validationUrl);
+            errorMsgElement.innerText = 'Ativando...'; // Feedback visual
+
+            fetch(validationUrl, {
+                method: 'PATCH', // 
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                body: JSON.stringify({ chave: licenseKey, hardwareID: hwid })
+            })
+            .then(response => {
+                if (!response.ok) {
+
+                    return response.json().catch(() => null).then(errorData => {
+                         throw new Error(errorData?.msg || `Erro do servidor: ${response.status} ${response.statusText}`);
+                    });
+                }
+                return response.json();
+            })
+            .then(resp => {
+                console.log("Resposta do servidor:", resp);
+
+                if (resp.success) {
+
+                    localStorage.setItem(LICENSE_STORAGE_KEY, licenseKey);
+                    localStorage.setItem(HWID_STORAGE_KEY, hwid);
+
+                    const saveCode =
+                      `if(typeof $._ext !== 'undefined'){ $._ext.saveLicense(${JSON.stringify(licenseKey)}); $._ext.saveHardwareID(${JSON.stringify(hwid)}); }`;
+                    csInterface.evalScript(saveCode);
+
+                    showToast("Extensão ativada com sucesso!", 'success');
+                    showMainContent();
+                } else {
+
+                    errorMsgElement.innerText = resp.msg || 'Chave de ativação inválida ou expirada.';
+                    keyInput.focus();
+                }
+            })
+            .catch(error => {
+                // 5. Falha na conexão ou erro inesperado
+                console.error('Erro durante a ativação via fetch:', error);
+                errorMsgElement.innerText = `Falha na ativação: ${error.message}. Verifique a conexão ou a URL do servidor.`;
+                keyInput.focus();
+            });
+        }); // Fim evalScript getHardwareID
+    } // Fim handleActivationClick
+
+    document.addEventListener('DOMContentLoaded', () => {
+         const activateButton = document.getElementById('activateBtn');
+         if (activateButton) {
+            activateButton.addEventListener('click', handleActivationClick);
+         }
+         // Adiciona listener para fechar o modal de presets
+         const closeModalButton = document.getElementById("fecharModal");
+         if(closeModalButton) {
+            closeModalButton.onclick = ()=>{ document.getElementById("modalPresets").style.display = "none"; };
+         }
+         const discordLinkAnchor = document.querySelector("#discordLink a"); // Seleciona a tag <a> dentro de #discordLink
+if (discordLinkAnchor) {
+    discordLinkAnchor.addEventListener("click", (event) => {
+        event.preventDefault(); // Impede o comportamento padrão do link <a>
+        const url = discordLinkAnchor.getAttribute("href"); // Pega a URL do atributo href
+        if (url) {
+            csInterface.openURLInDefaultBrowser(url); // Abre a URL usando a função correta
+        } else {
+            console.error("URL não encontrada no link Discord.");
+        }
+    });
+}
+    });
+
+
+    function handleJSXResponse(response, successMsg = "Operação concluída!", knownErrors = []) {
+        console.log("JSX Response:", response); // Log para debug
+        if (response === "ERROR:LICENSE_REQUIRED") {
+            showToast("Esta função requer ativação.", 'error');
+            showActivationModal("A licença é necessária para esta operação.");
+        } else if (response && !response.startsWith("Erro:") && !knownErrors.includes(response) && response !== "ERROR:JSX_NOT_LOADED") {
+            // Considera sucesso se não for erro conhecido e não começar com "Erro:"
+            showToast(successMsg || response, 'success'); // Usa a msg padrão ou a resposta se não houver msg específica
+        } else {
+            // Mostra a mensagem de erro retornada pelo JSX ou uma genérica
+            showToast(response || "Ocorreu um erro.", 'error');
+        }
+    }
+
+
+    function initializeUI() {
+        console.log("Inicializando UI principal...");
+
+
+        const doc = document; // Referência ao document
+        const presetCats = ["Shake","CCS","Zoom + Twixtor","Textos","Efeitos"];
+        let currentCat = "Shake"; // Categoria inicial
+        let lastCat = "Shake"; // Última categoria de preset vista
+
+        // Lista de ações (Sua original)
+        const actions = [
+            { id: "applyMarkers", label: "Aplicar em todas as marcações", description: "Coloca shakes automaticamente em cada marcador", handler: openMarkerModal },
+            { id: "precomposeVideos", label: "Pré-compor vídeos", description: "Cria uma pré-composição para cada camada de vídeo", handler: precomposeVideos },
+            { id: "stretchEffects", label: "Ajustar tamanho dos Efeitos", description: "Ajusta keyframes dos efeitos para duração da camada selecionada", handler: stretchEffects },
+            { id: "createCutMarkers", label: "Criar Marcadores", description: "Cria marcadores nos cortes de vídeo", handler: createCutMarkers },
+            { id: "stackLayers", label: "Juntar Camadas", description: "Alinha camadas selecionadas sequencialmente", handler: stackLayers },
+            { id: "travadinha", label: "Travadinha", description: "Efeito travadinha vai e vem(ajuste os frames conforme preferir)", handler: runTravadinha },
+            { id: "assignClips", label: "Posicionar Clips", description: "Posiciona vídeos selecionados nos marcadores(Clips não pode estar cortado)", handler: runAssignClips },
+            { id: "smartThreshold", label: "Detectar batidas da música", description: "Detecta batidas da música e adiciona marcadores(precisa ajustar o Threshold dependendo da música)", handler: runSmartThresholdPanel },
+            { id: "copyLayerMarkers", label: "Copiar Marcadores", description: "Copia marcadores da layer selecionada para a composição", handler: runCopyLayerMarkers },
+            { id: "applyAudioPresetEnd", label: "Reverb Fim do Áudio", description: "Aplica preset de reverb no final do áudio selecionado(OBS:Cortar o audio no final!)", handler: applyAudioPresetEnd }
+        ];
+
+        // --- Todas as suas funções originais de handlers e UI ---
+
+        function applyAudioPresetEnd() {
+            const preset = extPath + "/presets/Audio/fimaudio.ffx";
+            csInterface.evalScript(`$._ext.applyPresetAtAudioEnd(${JSON.stringify(preset)})`, resp => {
+                // Como esta ação não tem checagem de licença agora, não precisamos tratar ERROR:LICENSE_REQUIRED
+                 handleJSXResponse(resp, "Preset aplicado no final do áudio!", ["Nenhuma composição ativa.", "Selecione um layer de áudio.", "O layer selecionado não contém áudio.", "Preset não encontrado."]);
+            });
+        }
+
+        function runAssignClips() {
+            csInterface.evalScript(`$._ext.assignSelectedClipsToMarkers()`, resp => {
+                 handleJSXResponse(resp, "Vídeos atribuídos aos markers com sucesso!", ["Selecione uma composição ativa.", "Selecione ao menos um layer de vídeo.", "Não há marcadores na composição."]);
+            });
+        }
+
+        function runSmartThresholdPanel() {
+            csInterface.evalScript(`$._ext.openSmartThreshold()`, resp => {
+                 // A função openSmartThreshold pode retornar erros específicos ou a msg de sucesso
+                 handleJSXResponse(resp, "Gbr Music carregado com sucesso!", ["Erro ao abrir Gbr Music:"]); // Passa parte da msg de erro conhecida
+            });
+        }
+
+        function renderCategories() {
+            const bar = doc.getElementById("categories");
+            if (!bar) return; // Proteção
+            bar.innerHTML = "";
+            // Adiciona "Ações" no início
+            ["Ações", ...presetCats].forEach(cat => {
+                const btn = doc.createElement("button");
+                btn.innerText = cat;
+                if (cat === currentCat) btn.classList.add("active");
+                btn.onclick = () => {
+                    currentCat = cat;
+                    if (cat !== "Ações") lastCat = cat; // Guarda a última categoria de preset
+                    renderCategories(); // Re-renderiza para atualizar a classe 'active'
+                    loadCategory(cat); // Carrega o conteúdo da categoria
+                };
+                bar.appendChild(btn);
+            });
+        }
+
+        function loadCategory(cat) {
+            const out = doc.getElementById("output");
+            if (!out) return; // Proteção
+            out.innerHTML = ""; // Limpa conteúdo anterior
+            if (cat === "Ações") {
+                // Renderiza cards de ações
+                actions.forEach(act => {
+                    const card = doc.createElement("div");
+                    card.className = "preset action-card"; // Reusa a classe preset ou cria action-card
+                    const lbl = doc.createElement("div");
+                    lbl.className = "action-label";
+                    lbl.innerText = act.label;
+                    const dsc = doc.createElement("div");
+                    dsc.className = "action-desc";
+                    dsc.innerText = act.description;
+                    card.append(lbl, dsc);
+                    card.onclick = act.handler; // Associa o handler ao clique
+                    out.appendChild(card);
+                });
+            } else {
+                // Carrega presets da categoria selecionada
+                loadPresets(cat);
+            }
+        }
+
+        function loadPresets(cat) {
+            const folder = `${extPath}/presets/${cat}/`;
+            const gifBase = `${extPath}/gif/${cat}/`;
+
+            csInterface.evalScript(`$._ext.listPresets(${JSON.stringify(folder)})`, result => {
+                const out = doc.getElementById("output");
+                if (!out) return;
+
+                // <<< AQUI VEM A CHECAGEM IMPORTANTE >>>
+                if (result === "ERROR:LICENSE_REQUIRED") {
+                    handleJSXResponse(result); // Deixa o handler mostrar o modal
+                    out.innerHTML = '<p style="color: #ff6666; text-align: center;">Ativação necessária para ver os presets.</p>';
+                    return;
+                }
+                // Trata outros erros de listagem
+                if (!result || result.startsWith("Erro:")) {
+                    out.innerHTML = '<p style="color: #ffcc66; text-align: center;">Nenhum preset encontrado ou erro ao listar.</p>';
+                    console.error("Erro ao listar presets:", result);
+                    return;
+                }
+
+                // Processa a lista de presets (seu código original)
+                const items = result.split("\n").filter(Boolean);
+                const favs = JSON.parse(localStorage.getItem("favoritos") || "[]");
+                const favoriteItems = items.filter(item => favs.some(f => f.preset === item && f.category === cat));
+                const nonFavoriteItems = items.filter(item => !favs.some(f => f.preset === item && f.category === cat));
+                const sortedItems = favoriteItems.concat(nonFavoriteItems);
+
+                out.innerHTML = ""; // Limpa antes de adicionar
+
+                sortedItems.forEach(item => {
+                    const card = doc.createElement("div");
+                    card.className = "preset";
+                    const isFav = favs.some(f=>f.preset===item && f.category === cat);
+                    if (isFav) card.classList.add("favorito");
+
+                    const label = decodeURIComponent(item.replace(".ffx",""));
+                    const img = doc.createElement("img");
+                    const gifPath = `${gifBase}${item.replace(".ffx",".gif")}`;
+                    img.src = gifPath;
+                    img.alt = label; // Adiciona alt text
+                    img.onerror = () => img.style.display = "none"; // Esconde se GIF não carregar
+
+                    const span = doc.createElement("span");
+                    span.innerText = label;
+
+                    card.append(img, span);
+                    addFavBtn(card, item, cat, folder, gifPath); // Passa a categoria
+
+                    card.onclick = () => {
+                        const presetFullPath = folder + item;
+                        csInterface.evalScript(`$._ext.applyPreset(${JSON.stringify(presetFullPath)})`, res => {
+                             handleJSXResponse(res, `Preset "${label}" aplicado!`, ["Nenhuma composição ativa."]);
+                        });
+                    };
+                    out.appendChild(card);
+                });
+            });
+        }
+
+        function addFavBtn(container, preset, category, ppath, gifPath) { // Recebe categoria
+            const btn = doc.createElement("button");
+            let favs = JSON.parse(localStorage.getItem("favoritos") || "[]");
+            const isFav = favs.some(f=>f.preset === preset && f.category === category);
+
+            btn.innerText = "⭐"; // Estrela
+            btn.classList.add("fav-button"); // Adiciona classe para estilização
+            btn.style.color = isFav ? "gold" : "darkgray";
+            btn.title = isFav ? "Remover dos Favoritos" : "Adicionar aos Favoritos";
+
+            btn.onclick = e => {
+                e.stopPropagation(); // Evita que o clique no botão dispare o clique no card
+                favs = JSON.parse(localStorage.getItem("favoritos") || "[]");
+                if (isFav) {
+                    // Remove
+                    favs = favs.filter(f => !(f.preset === preset && f.category === category));
+                    btn.style.color = "darkgray";
+                    btn.title = "Adicionar aos Favoritos";
+                    container.classList.remove("favorito");
+                } else {
+                    // Adiciona
+                    favs.push({ preset: preset, category: category, path: ppath, gifPath: gifPath }); // Salva categoria
+                    btn.style.color = "gold";
+                    btn.title = "Remover dos Favoritos";
+                    container.classList.add("favorito");
+                }
+                localStorage.setItem("favoritos", JSON.stringify(favs));
+                // Opcional: Re-renderizar a categoria atual para reordenar imediatamente
+                // loadPresets(currentCat);
+            };
+            container.appendChild(btn);
+        }
+
+        function openMarkerModal() {
+            const modal = doc.getElementById("modalPresets");
+            const list = doc.getElementById("listaPresets");
+            if(!modal || !list) return;
+
+            list.innerHTML = ""; // Limpa lista anterior
+            const folder = `${extPath}/presets/Shake/`; // Caminho fixo para shakes por enquanto
+
+            csInterface.evalScript(`$._ext.listPresets(${JSON.stringify(folder)})`, result => {
+                 // <<< CHECAGEM IMPORTANTE AQUI TAMBÉM >>>
+                 if (result === "ERROR:LICENSE_REQUIRED") {
+                    handleJSXResponse(result);
+                    list.innerHTML = '<p style="color: #ff6666;">Ativação necessária.</p>';
+                    modal.style.display = "flex";
+                    return;
+                 }
+                 if (!result || result.startsWith("Erro:")) {
+                    list.innerHTML = '<p style="color: #ffcc66;">Nenhum preset encontrado.</p>';
+                    console.error("Erro ao listar presets para modal:", result);
+                    modal.style.display = "flex";
+                    return;
+                 }
+
+                // Processa presets (seu código original)
+                result.split("\n").filter(Boolean).forEach(item => {
+                    const div = doc.createElement("div");
+                    div.className = "preset-modal-item"; // Classe para estilizar itens do modal
+                    div.innerText = decodeURIComponent(item.replace(".ffx",""));
+                    div.onclick = () => {
+                        const presetFullPath = folder + item;
+                        csInterface.evalScript(`$._ext.applyPresetToMarkers(${JSON.stringify(presetFullPath)})`, resp => {
+                            modal.style.display = 'none'; // Esconde o modal após a tentativa
+                            handleJSXResponse(resp, "Preset aplicado em todas as marcações!", ["Nenhuma composição ativa.", "Nenhuma marcação encontrada."]);
+                        });
+                    };
+                    list.appendChild(div);
+                });
+                modal.style.display = "flex"; // Mostra o modal
+            });
+        }
+
+        function precomposeVideos() {
+            csInterface.evalScript(`$._ext.precomposeEachVideo()`, resp => {
+                handleJSXResponse(resp, null, ["Nenhuma composição ativa.", "Nenhum vídeo encontrado ou pré-composto."]); // Usa null para pegar msg do JSX
+            });
+        }
+
+        function stretchEffects() {
+            csInterface.evalScript(`$._ext.stretchEffects()`, resp => {
+                handleJSXResponse(resp, null, ["Nenhuma composição ativa.", "Selecione ao menos uma camada."]); // Usa null para pegar msg do JSX
+            });
+        }
+
+        function createCutMarkers() {
+            csInterface.evalScript(`$._ext.createCutMarkers()`, resp => {
+                handleJSXResponse(resp, null, ["Nenhuma composição ativa.", "Nenhum corte encontrado para criar marcadores."]); // Usa null para pegar msg do JSX
+            });
+        }
+
+        function stackLayers() {
+            csInterface.evalScript(`$._ext.stackLayers()`, resp => {
+                 handleJSXResponse(resp, "Todas as camadas foram juntadas com sucesso!", ["Nenhuma composição ativa.", "Selecione ao menos 2 camadas para juntar."]);
+            });
+        }
+
+        function runTravadinha() {
+            csInterface.evalScript(`$._ext.travadinhaGBR()`, resp => {
+                // A função travadinha pode retornar erro ou a msg de sucesso do painel
+                handleJSXResponse(resp, "Painel Travadinha GBR carregado com sucesso!", ["Erro ao inicializar painel"]); // Passa parte da msg de erro
+            });
+        }
+
+        function runCopyLayerMarkers() {
+            csInterface.evalScript(`$._ext.copyLayerMarkersToComp()`, resp => {
+                 handleJSXResponse(resp, null, ["Nenhuma composição ativa.", "Selecione uma layer com marcadores.", "A layer não possui marcadores."]); // Usa null
+            });
+        }
+
+        // --- Código final de inicialização da UI ---
+        // Adiciona listener para o link do footer AQUI DENTRO
+        const hubLink = document.getElementById("hubLink");
+        if (hubLink) {
+            hubLink.addEventListener("click", () => {
+                csInterface.openURLInDefaultBrowser("https://editinghub.com.br/");
+            });
+        }
+
+        // Renderiza as categorias e carrega a inicial
+        renderCategories();
+        loadCategory(currentCat);
+
+        console.log("UI principal inicializada.");
+        // <<< FIM DO SEU CÓDIGO ORIGINAL DE UI >>>
+
+    } // --- Fim da função initializeUI ---
+
+/*
+KioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKgoqKiAg
+IEFWSVNPIOKAkyBQUk9JQklETyBERUNPTVBJTEFSIC8gVVNBUiBJQSAgICAgICAgICAgICAqKgoqKiAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgKioKKiogICDD
+iSBleHByZXNzYW1lbnRlIHByb2liaWRvIGRlc2NyaXB0b2dyYWZhciwgICAgICAgICAqKgoqKiAgIGRl
+Y29tcGlsYXIgb3UgdXNhciBJbnRlbGlnw6puY2lhIEFydGlmaWNpYWwgcGFyYSAgICoqCioqICAgbW9k
+aWZpY2FyIGVzdGUgc2NyaXB0LiBRdWFscXVlciB2aW9sYcOnw6NvIGVzdGFyw6EgICAqKgoqKiAgIHN1
+amVpdGEgYSByZXNwb25zYWJpbGl6YcOnw6NvIGxlZ2FsLiAgICAgICAgICAgICAgICAqKgoqKioqKioq
+KioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioq
+*/
+    // --- Ponto de Entrada Principal ---
+    // Chama a função init quando o DOM estiver pronto
+    window.addEventListener('DOMContentLoaded', init);
+
+  </script>
+
+</body>
+</html>

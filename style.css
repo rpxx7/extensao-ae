@@ -1,0 +1,422 @@
+/* style.css */
+/* (sem alterações, mantido conforme V2.1 Glass Redesign + Ações) */
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600&display=swap');
+:root {
+  --clr-bg-start: #1e0000;
+  --clr-bg-end:   #160000;
+  --clr-accent:   #e53935;
+  --clr-text:     #f5f5f5;
+  --glass-bg:     rgba(255,255,255,0.06);
+  --glass-border: rgba(255,255,255,0.2);
+}
+* { box-sizing:border-box; }
+body {
+  margin:0;padding:0;
+  font-family:'Montserrat',sans-serif;
+  color:var(--clr-text);
+  background: linear-gradient(145deg,var(--clr-bg-start),var(--clr-bg-end));
+  min-height:100vh;overflow-y:auto;-webkit-font-smoothing:antialiased;
+}
+@keyframes fadeIn {
+  from {opacity:0;transform:translateY(10px);} to {opacity:1;transform:translateY(0);}
+}
+#categories {
+  display:flex;justify-content:center;flex-wrap:wrap;
+  gap:12px;padding:12px 20px;margin:20px auto;max-width:90%;
+  background:var(--glass-bg);backdrop-filter:blur(10px);
+  border-radius:50px;border:1px solid var(--glass-border);
+  box-shadow:0 8px 32px rgba(0,0,0,0.37);
+  animation:fadeIn .5s ease forwards;
+}
+#categories button {
+  background:transparent;border:1px solid rgba(255,255,255,0.3);
+  color:#ffdede;padding:8px 16px;border-radius:30px;
+  font-size:14px;font-weight:500;text-transform:uppercase;
+  cursor:pointer;transition:background .3s,border-color .3s,box-shadow .3s,transform .2s;
+}
+#categories button:hover { background:rgba(255,255,255,0.1);transform:translateY(-2px); }
+#categories button.active {
+  background:rgba(255,255,255,0.15);border-color:var(--clr-accent);
+  box-shadow:0 0 12px rgba(229,57,53,0.7);color:#fff;
+}
+.grid-container {
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+  gap:24px;padding:20px;max-width:98%;margin:0 auto;
+  animation:fadeIn .6s ease forwards;
+}
+.preset {
+  position: relative;
+  background: rgba(255, 255, 255, 0.08); /* Mais sutil */
+  backdrop-filter: blur(10px); /* Ajuste o blur conforme preferir */
+  border: 1px solid rgba(255, 255, 255, 0.15); /* Borda mais sutil */
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25); /* Sombra mais suave */
+  transition: transform 0.3s, box-shadow 0.3s, background 0.3s;
+}
+.preset::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.15), transparent);
+  pointer-events: none; /* Para não interferir nos cliques */
+  opacity: 0.6;
+}
+.preset:hover {
+  transform: translateY(-5px) scale(1.02);
+  background: rgba(255, 255, 255, 0.15); /* Mais claro ao passar o mouse */
+  box-shadow: 0 12px 48px rgba(229, 57, 53, 0.35); /* Sombra mais intensa */
+}
+.preset img {
+  width:100%;height:100px;object-fit:cover;transition:transform .3s;
+}
+.preset:hover img { transform:scale(1.1); }
+.preset span {
+  position:absolute;bottom:0;left:0;right:0;
+  padding:8px;font-size:14px;font-weight:500;color:#fff;
+  text-shadow:0 2px 4px rgba(0,0,0,0.7);
+  background:linear-gradient(180deg,transparent,rgba(0,0,0,0.7));
+}
+.preset button {
+  position:absolute;top:10px;right:10px;width:32px;height:32px;
+  background:rgba(0,0,0,0.4);border:none;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:18px;color:#fff;cursor:pointer;
+  box-shadow:0 2px 8px rgba(0,0,0,0.5);
+  transition:color .2s,background .2s;
+}
+.preset button:hover { background:rgba(0,0,0,0.6); }
+.preset.favorito button { color:#ffd700; }
+.action-card {
+  display:flex;flex-direction:column;justify-content:center;
+  background:var(--glass-bg);backdrop-filter:blur(12px);
+  border:1px solid var(--glass-border);border-radius:16px;
+  padding:20px;cursor:pointer;
+  transition:transform .2s,box-shadow .2s;
+}
+.action-card:hover {
+  transform:translateY(-4px);
+  box-shadow:0 8px 24px rgba(229,57,53,0.4);
+}
+.action-label {
+  font-size:18px;font-weight:600;color:#fff;margin-bottom:6px;
+}
+.action-desc {
+  font-size:13px;font-weight:400;color:#ddd;line-height:1.4;
+}
+#modalPresets {
+  position:fixed;top:0;left:0;width:100%;height:100%;
+  background:rgba(0,0,0,0.8);display:none;
+  align-items:center;justify-content:center;z-index:999;
+}
+#modalPresets .modal-content {
+  background:var(--glass-bg);backdrop-filter:blur(12px);
+  border:1px solid var(--glass-border);border-radius:12px;
+  padding:24px;max-width:360px;width:90%;color:#fff;
+  box-shadow:0 8px 32px rgba(0,0,0,0.5);
+}
+#modalPresets .close {
+  float:right;font-size:24px;cursor:pointer;color:#fff;
+}
+#modalPresets #listaPresets {
+  max-height:60vh;overflow-y:auto;margin-top:10px;
+}
+.preset-modal {
+  display:block;background:var(--glass-bg);
+  backdrop-filter:blur(10px);border:1px solid var(--glass-border);
+  border-radius:8px;padding:10px 12px;margin:6px 0;
+  font-size:14px;font-weight:500;color:var(--clr-text);
+  cursor:pointer;transition:background .2s,box-shadow .2s,transform .2s;
+}
+.preset-modal:hover {
+  background:rgba(255,255,255,0.12);
+  box-shadow:0 4px 12px rgba(229,57,53,0.3);
+  transform:translateY(-2px);
+}
+#gbrLink,#luisferLink {
+  color:#ff8888;cursor:pointer;transition:color .2s;
+}
+#gbrLink:hover,#luisferLink:hover { color:#ff5555; }
+/* ===== Scrollbar WebKit (Chrome, Edge, Safari) ===== */
+::-webkit-scrollbar {
+  width: 8px;               /* largura da barra */
+}
+
+::-webkit-scrollbar-track {
+  background: #2e2e2e;      /* cor do trilho */
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: #555;   /* cor do “polegar” */
+  border-radius: 4px;
+  border: 2px solid #2e2e2e;/* cria espaçamento interno */
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: #777;   /* quando passar o mouse */
+}
+
+/* ===== Scrollbar Firefox ===== */
+* {
+  scrollbar-width: thin;             /* deixa bem fina */
+  scrollbar-color: #555 #2e2e2e;     /* thumb e track */
+}
+/* Footer link mais elegante */
+.footer {
+  text-align: center;
+  margin: 20px 0;
+}
+
+.footer-link {
+  display: inline-block;
+  background: linear-gradient(135deg, #c50000, #630303);
+  color: #fff;
+  padding: 8px 20px;
+  border-radius: 20px;
+  text-decoration: none;
+  font-weight: 500;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  cursor: pointer;
+}
+
+.footer-link:hover {
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+.preset.favorito {
+  position: relative;
+  background: rgba(255, 255, 255, 0.08); /* Mais sutil */
+  backdrop-filter: blur(10px); /* Ajuste o blur conforme preferir */
+  border: 2px solid rgba(255, 255, 255, 0.15); /* Borda mais sutil */
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25); /* Sombra mais suave */
+  transition: transform 0.3s, box-shadow 0.3s, background 0.3s, border-color 0.3s; /* Adicionado border-color */
+  /* --- Borda Amarela para Favoritos --- */
+  border-color: #ffcc00; /* Cor amarela */
+  box-shadow: 0 8px 32px rgba(255, 204, 0, 0.4); /* Opcional: sombra amarela para destaque */
+}
+
+/* Mantenha a regra para a estrela dourada */
+.preset.favorito button {
+    color: #ffd700; /* Dourado */
+}
+
+/* Adicione ou modifique a regra de hover para manter a borda amarela */
+.preset.favorito:hover {
+  transform: translateY(-5px) scale(1.02);
+  background: rgba(255, 255, 255, 0.15); /* Mais claro ao passar o mouse */
+  box-shadow: 0 12px 48px rgba(255, 204, 0, 0.6); /* Sombra amarela mais intensa no hover */
+  border-color: #ffcc00; /* Mantém a borda amarela no hover */
+}
+/* Reutiliza o estilo básico de modal, mas personaliza */
+#customAlertOverlay {
+  /* O estilo "modal" já deve ter position: fixed, background semi-transparente, etc. */
+  justify-content: center; /* Centraliza horizontalmente */
+  align-items: center;     /* Centraliza verticalmente */
+}
+
+#customAlertContent {
+  background-color: #fefefe; /* Fundo branco, ajuste conforme seu tema */
+  padding: 20px;
+  border: 1px solid #888;
+  width: 80%; /* Ajuste o tamanho */
+  max-width: 400px; /* Tamanho máximo */
+  text-align: center;
+  border-radius: 5px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+#customAlertMessage {
+  margin-bottom: 15px;
+  font-size: 16px;
+  color: #333; /* Cor do texto, ajuste */
+}
+
+#customAlertClose {
+  background-color: #4CAF50; /* Cor do botão, ajuste */
+  color: white;
+  padding: 10px 15px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+#customAlertClose:hover {
+  background-color: #45a049; /* Cor ao passar o mouse */
+}
+/* Estilo para o Indicador de Processamento */
+#processingIndicator {
+  position: fixed; /* Fixa na viewport */
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7); /* Fundo semi-transparente escuro */
+  display: flex; /* Usa flexbox para centralizar o conteúdo */
+  justify-content: center; /* Centraliza horizontalmente */
+  align-items: center;     /* Centraliza verticalmente */
+  z-index: 1000;         /* Garante que fique acima de outros elementos */
+  color: white;          /* Cor do texto */
+  font-size: 18px;       /* Tamanho da fonte */
+  font-weight: 600;
+  backdrop-filter: blur(5px); /* Opcional: Efeito de blur no fundo */
+}
+
+.indicator-content {
+    background: rgba(255, 255, 255, 0.1); /* Fundo levemente transparente para a caixa da mensagem */
+    padding: 15px 30px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+#toast-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 9999;
+}
+.toast {
+  padding: 12px 16px;
+  border-radius: 4px;
+  font-size: 14px;
+  color: #fff;
+  opacity: 0;
+  transform: translateX(100%);
+  transition: opacity 0.3s, transform 0.3s;
+}
+.toast.show { opacity: 1; transform: translateX(0); }
+.toast.hide { opacity: 0; transform: translateX(100%); }
+.toast.success { background: #4caf50; }
+.toast.error   { background: #f44336; }
+.toast.info    { background: #2196f3; }
+.toast.warn    { background: #ff9800; }
+.activation-modal {
+  background: #232323;
+  border-radius: 10px;
+  box-shadow: 0 8px 12px rgba(0,0,0,0.5);
+  padding: 20px;
+  width: 320px;
+  text-align: center;
+  color: #fff;
+}
+
+.activation-title {
+  font-size: 1.5em;
+  margin-bottom: 15px;
+}
+
+#licenseKey {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 12px;
+  border-radius: 6px;
+  border: none;
+  outline: none;
+}
+
+.activate-button {
+  padding: 10px 20px;
+  background: #1976d2;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.activate-button:hover {
+  background: #0d47a1;
+}
+
+#activation-status {
+  margin-top: 12px;
+  font-size: 0.9em;
+}
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.7);
+  display: flex;
+  align-items: center; /* Centraliza verticalmente */
+  justify-content: center; /* Centraliza horizontalmente */
+  z-index: 999;
+}
+
+.modal-content {
+  margin: 0 auto;
+}
+/* Coloque/Atualize no seu style.css ou no <style> do index.html */
+
+/* Botão Ativar */
+#activateBtn {
+  margin-bottom: 10px;
+  background-color: var(--clr-accent); /* Cor vermelha */
+  color: #fff;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.3s, transform 0.2s; /* Adiciona transição para o scale */
+  transform: scale(1.2); /* Aumenta o botão em 10% */
+  /* display: inline-block; */ /* Pode ser necessário se o botão for inline por padrão */
+}
+
+#activateBtn:hover {
+  background-color: #c4302b; /* Vermelho mais escuro */
+  /* Opcional: pode adicionar um leve aumento no hover também */
+  /* transform: scale(1.15); */
+}
+
+/* Parágrafo da Mensagem de Erro */
+#activationErrorMsg {
+  margin: 0;         /* Zera margens */
+  padding: 0;        /* Zera padding */
+  min-height: 0;     /* Permite colapsar */
+  line-height: 1;    /* Altura mínima da linha */
+  height: auto;      /* Altura automática se tiver texto */
+  color: #ff6666;    /* Cor do erro */
+}
+/* Tenta dar um espacinho SÓ se tiver erro (pode não funcionar perfeitamente só com CSS) */
+#activationErrorMsg:not(:empty) {
+   margin-bottom: 5px; /* Pequeno espaço abaixo SÓ se houver texto de erro */
+   min-height: 1.2em;  /* Garante espaço para o texto */
+}
+
+/* Parágrafo do Link Discord */
+#discordLink {
+  margin-top: 0;     /* Garante que ele cole no elemento acima */
+  margin-bottom: 0;  /* Remove espaço abaixo dele */
+  font-size: 12px;
+  color: #ccc;
+}
+
+/* Estilos do link em si */
+#discordLink a {
+  color: #aaa;
+  text-decoration: underline;
+  cursor: pointer; /* Adiciona cursor de link */
+}
+
+#discordLink a:hover {
+  color: #fff;
+}
+#activationLogo {
+  width: 150px; /* Defina o tamanho desejado */
+  height: auto; /* Mantém a proporção original */
+  /* ou você pode definir max-width */
+  /* max-width: 50px; */
+}

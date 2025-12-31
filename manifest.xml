@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<ExtensionManifest 
+    Version="4.0" 
+    ExtensionBundleId="com.MyCompany.Fxhub" 
+    ExtensionBundleVersion="2.0.0" 
+    ExtensionBundleName="FX HUB"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+
+    <ExtensionList>
+        <!-- ID único para esta versão 2 -->
+        <Extension Id="com.MyCompany.Fxhub.extension1" Version="2.0.0" />
+    </ExtensionList>
+
+    <ExecutionEnvironment>
+        <HostList>
+            <Host Name="AEFT" Version="[13.0,99.9]" />
+        </HostList>
+        <LocaleList>
+            <Locale Code="All" />
+        </LocaleList>
+        <RequiredRuntimeList>
+            <RequiredRuntime Name="CSXS" Version="4.0" />
+        </RequiredRuntimeList>
+    </ExecutionEnvironment>
+
+    <DispatchInfoList>
+        <!-- Deve usar o mesmo Id que você declarou acima -->
+        <Extension Id="com.MyCompany.Fxhub.extension1">
+            <DispatchInfo>
+                <Resources>
+                    <MainPath>./index.html</MainPath>
+                    <ScriptPath>./MainScript.jsxbin</ScriptPath>
+                </Resources>
+                <Lifecycle>
+                    <AutoVisible>true</AutoVisible>
+                </Lifecycle>
+                <UI>
+                    <Type>Panel</Type>
+                    <!-- Nome que aparece no menu de extensões -->
+                    <Menu>FX HUB</Menu>
+                    <Geometry>
+                        <Size>
+                            <Height>100</Height>
+                            <Width>250</Width>
+                        </Size>
+                        <MaxSize>
+                            <Height>500</Height>
+                            <Width>500</Width>
+                        </MaxSize>
+                        <MinSize>
+                            <Height>100</Height>
+                            <Width>250</Width>
+                        </MinSize>
+                    </Geometry>
+                </UI>
+            </DispatchInfo>
+        </Extension>
+    </DispatchInfoList>
+</ExtensionManifest>
